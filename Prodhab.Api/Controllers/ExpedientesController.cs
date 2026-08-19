@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Prodhab.Api.DTOs.Expedientes;
+using Prodhab.Api.DTOs.Revision;
 using Prodhab.Api.Services;
 
 namespace Prodhab.Api.Controllers;
@@ -11,11 +12,13 @@ namespace Prodhab.Api.Controllers;
 public class ExpedientesController : ControllerBase
 {
     private readonly IExpedienteService _expedientes;
+    private readonly IRevisionService _revision;
     private readonly ICurrentUserService _currentUser;
 
-    public ExpedientesController(IExpedienteService expedientes, ICurrentUserService currentUser)
+    public ExpedientesController(IExpedienteService expedientes, IRevisionService revision, ICurrentUserService currentUser)
     {
         _expedientes = expedientes;
+        _revision = revision;
         _currentUser = currentUser;
     }
 
@@ -32,9 +35,9 @@ public class ExpedientesController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType(typeof(List<ExpedienteListaDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<ExpedienteListaDto>>> Listar(CancellationToken ct)
+    public async Task<ActionResult<List<ExpedienteListaDto>>> Listar([FromQuery] string? estado, CancellationToken ct)
     {
-        var expedientes = await _expedientes.ListarPorUsuarioAsync(_currentUser.GetUserId(), ct);
+        var expedientes = await _expedientes.ListarPorUsuarioAsync(_currentUser.GetUserId(), estado, ct);
         return Ok(expedientes);
     }
 
@@ -69,5 +72,48 @@ public class ExpedientesController : ControllerBase
     {
         await _expedientes.EliminarAsync(id, ct);
         return NoContent();
+    }
+
+    [HttpPost("{id:int}/enviar")]
+    [ProducesResponseType(typeof(ExpedienteDetalleDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ExpedienteDetalleDto>> Enviar(int id, CancellationToken ct)
+    {
+        var enviado = await _expedientes.EnviarAsync(id, ct);
+        return Ok(enviado);
+    }
+
+    [HttpPost("{id:int}/solicitar-subsanacion")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ExpedienteDetalleDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ExpedienteDetalleDto>> SolicitarSubsanacion(
+        int id,
+        [FromBody] SolicitarSubsanacionDto dto,
+        CancellationToken ct)
+    {
+        var actualizado = await _revision.SolicitarSubsanacionAsync(id, dto, ct);
+        return Ok(actualizado);
+    }
+
+    [HttpPost("{id:int}/aprobar")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ExpedienteDetalleDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ExpedienteDetalleDto>> Aprobar(
+        int id,
+        [FromBody] AprobarDto dto,
+        CancellationToken ct)
+    {
+        var actualizado = await _revision.AprobarAsync(id, dto, ct);
+        return Ok(actualizado);
     }
 }

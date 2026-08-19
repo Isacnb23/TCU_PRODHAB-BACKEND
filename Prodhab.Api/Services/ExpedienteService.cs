@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Prodhab.Api.Data;
 using Prodhab.Api.DTOs.Expedientes;
+using Prodhab.Api.DTOs.Revision;
 using Prodhab.Api.Exceptions;
 using Prodhab.Api.Models;
 
@@ -8,6 +9,9 @@ namespace Prodhab.Api.Services;
 
 public class ExpedienteService : IExpedienteService
 {
+    // El paso 9 es la revisión/envío en sí: no se exige "completado" para poder enviar.
+    private static readonly int[] PasosRequeridos = { 1, 2, 3, 4, 5, 6, 7, 8 };
+
     private readonly AppDbContext _db;
     private readonly ICurrentUserService _currentUser;
 
@@ -57,11 +61,12 @@ public class ExpedienteService : IExpedienteService
             FechaCreacion = expediente.FechaCreacion,
             FechaModificacion = expediente.FechaModificacion,
             FechaEnvio = expediente.FechaEnvio,
-            Datos = new List<DatosFormularioDto>()
+            Datos = new List<DatosFormularioDto>(),
+            Observaciones = new List<ObservacionDto>()
         };
     }
 
-    public async Task<List<ExpedienteListaDto>> ListarPorUsuarioAsync(int usuarioId, CancellationToken ct)
+    public async Task<List<ExpedienteListaDto>> ListarPorUsuarioAsync(int usuarioId, string? estado, CancellationToken ct)
     {
         // Un Admin ve todos los expedientes; el resto, solo los propios.
         // El controller siempre pasa el usuario autenticado.
@@ -70,6 +75,13 @@ public class ExpedienteService : IExpedienteService
         if (!_currentUser.EsAdmin())
         {
             consulta = consulta.Where(e => e.UsuarioId == usuarioId);
+        }
+
+        // Filtro opcional por estado (ej. panel Admin: ?estado=Enviado). Si no matchea un estado
+        // válido, se ignora y se devuelve sin filtrar.
+        if (!string.IsNullOrWhiteSpace(estado) && Enum.TryParse<EstadoExpediente>(estado, true, out var estadoFiltro))
+        {
+            consulta = consulta.Where(e => e.Estado == estadoFiltro);
         }
 
         return await consulta
@@ -114,6 +126,16 @@ public class ExpedienteService : IExpedienteService
                         DatosJson = d.DatosJson,
                         Completado = d.Completado,
                         FechaActualizacion = d.FechaActualizacion
+                    })
+                    .ToList(),
+                Observaciones = e.Observaciones
+                    .OrderByDescending(o => o.FechaCreacion)
+                    .Select(o => new ObservacionDto
+                    {
+                        Id = o.Id,
+                        Paso = o.Paso,
+                        Texto = o.Texto,
+                        FechaCreacion = o.FechaCreacion
                     })
                     .ToList()
             })
@@ -166,6 +188,48 @@ public class ExpedienteService : IExpedienteService
         // Datos, Subsanaciones e Historial caen por cascade.
         _db.Expedientes.Remove(expediente);
         await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task<ExpedienteDetalleDto> EnviarAsync(int id, CancellationToken ct)
+    {
+        var expediente = await CargarConAccesoAsync(id, ct);
+
+        if (expediente.Estado != EstadoExpediente.Borrador && expediente.Estado != EstadoExpediente.RequiereSubsanacion)
+        {
+            throw new BusinessRuleException($"No se puede enviar un expediente en estado {expediente.Estado}.");
+        }
+
+        var pasosCompletados = await _db.DatosFormularios
+            .Where(d => d.ExpedienteId == id && d.Completado)
+            .Select(d => d.Paso)
+            .ToListAsync(ct);
+
+        var pasosFaltantes = PasosRequeridos.Except(pasosCompletados).OrderBy(p => p).ToList();
+
+        if (pasosFaltantes.Count > 0)
+        {
+            throw new BusinessRuleException(
+                $"No se puede enviar el expediente. Faltan completar los pasos: {string.Join(", ", pasosFaltantes)}.");
+        }
+
+        var ahora = DateTime.UtcNow;
+
+        expediente.Estado = EstadoExpediente.Enviado;
+        expediente.FechaEnvio = ahora;
+        expediente.FechaModificacion = ahora;
+
+        _db.HistorialExpedientes.Add(new HistorialExpediente
+        {
+            ExpedienteId = expediente.Id,
+            UsuarioId = _currentUser.GetUserId(),
+            Accion = "Envio",
+            Detalle = "Expediente enviado a PRODHAB",
+            FechaCambio = ahora
+        });
+
+        await _db.SaveChangesAsync(ct);
+
+        return await ObtenerPorIdAsync(id, ct);
     }
 
     // Carga el expediente y verifica que el usuario actual sea su dueño (o Admin).

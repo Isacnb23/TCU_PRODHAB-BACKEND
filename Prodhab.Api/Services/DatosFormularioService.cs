@@ -37,9 +37,10 @@ public class DatosFormularioService : IDatosFormularioService
 
         AccesoExpediente.Verificar(expediente, _currentUser);
 
-        if (expediente.Estado != EstadoExpediente.Borrador)
+        if (expediente.Estado != EstadoExpediente.Borrador && expediente.Estado != EstadoExpediente.RequiereSubsanacion)
         {
-            throw new BusinessRuleException("Solo se pueden editar los pasos de un expediente en estado Borrador.");
+            throw new BusinessRuleException(
+                "Solo se pueden editar los pasos de un expediente en estado Borrador o que requiere subsanación.");
         }
 
         // Upsert sobre la fila única (ExpedienteId, Paso).

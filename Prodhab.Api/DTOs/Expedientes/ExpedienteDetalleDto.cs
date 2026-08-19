@@ -1,3 +1,5 @@
+using Prodhab.Api.DTOs.Revision;
+
 namespace Prodhab.Api.DTOs.Expedientes;
 
 // Respuesta completa: lo que el wizard necesita para retomar un expediente.
@@ -22,4 +24,6 @@ public class ExpedienteDetalleDto
     public DateTime? FechaEnvio { get; set; }
 
     public List<DatosFormularioDto> Datos { get; set; } = new();
+
+    public List<ObservacionDto> Observaciones { get; set; } = new();
 }

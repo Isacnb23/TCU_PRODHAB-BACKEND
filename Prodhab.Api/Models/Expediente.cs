@@ -36,4 +36,6 @@ public class Expediente
     public ICollection<Subsanacion> Subsanaciones { get; set; } = new List<Subsanacion>();
 
     public ICollection<HistorialExpediente> Historial { get; set; } = new List<HistorialExpediente>();
+
+    public ICollection<Observacion> Observaciones { get; set; } = new List<Observacion>();
 }

@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<DatosFormulario> DatosFormularios => Set<DatosFormulario>();
     public DbSet<Subsanacion> Subsanaciones => Set<Subsanacion>();
     public DbSet<HistorialExpediente> HistorialExpedientes => Set<HistorialExpediente>();
+    public DbSet<Observacion> Observaciones => Set<Observacion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,6 +74,14 @@ public class AppDbContext : DbContext
             entity.HasOne(h => h.Expediente)
                 .WithMany(e => e.Historial)
                 .HasForeignKey(h => h.ExpedienteId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Observacion>(entity =>
+        {
+            entity.HasOne(o => o.Expediente)
+                .WithMany(e => e.Observaciones)
+                .HasForeignKey(o => o.ExpedienteId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
