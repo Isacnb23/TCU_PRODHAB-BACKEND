@@ -1,43 +1,73 @@
-# Sistema de Expedientes PRODHAB - Backend
+# Sistema Web de Protocolos de Actuación — Backend (PRODHAB)
 
-API backend del Sistema de Expedientes de PRODHAB (Costa Rica), que da soporte al wizard de protocolos de actuación, gestión de expedientes, subsanaciones y autenticación de usuarios.
+API REST para la gestión de expedientes de protocolos de actuación (Ley 8968) de la Agencia de
+Protección de Datos de los Habitantes (PRODHAB).
 
 ## Stack
 
-- **.NET 10** (ASP.NET Core Web API)
-- **Entity Framework Core 10** + SQL Server
-- **JWT Bearer** para autenticación
-- **BCrypt.Net** para hash de contraseñas
+- ASP.NET Core Web API (.NET 10)
+- Entity Framework Core + SQL Server
+- Autenticación JWT con roles (Admin / Usuario)
+- Almacenamiento de archivos en disco con validación por contenido
 
-## Cómo levantar el proyecto localmente
+## Arquitectura
 
-### Requisitos
+Capas simples y mantenibles: **Controller → Servicio → DbContext**. Sin patrón repositorio ni MediatR
+(el `DbContext` de EF Core ya cumple ese rol). Manejo de errores centralizado con `ProblemDetails`.
 
-- [.NET SDK 10](https://dotnet.microsoft.com/download)
-- SQL Server LocalDB (incluido con Visual Studio) o una instancia de SQL Server accesible
+Entidades principales: `Expediente`, `DatosFormulario` (datos por paso del formulario),
+`Subsanacion`, `Observacion`, `Usuario`, `HistorialExpediente`.
 
-### Pasos
+## Ciclo de vida del expediente
 
-```bash
-# 1. Restaurar dependencias
-dotnet restore
-
-# 2. Aplicar migraciones y crear/actualizar la base de datos
-dotnet ef database update --project Prodhab.Api --startup-project Prodhab.Api
-
-# 3. Ejecutar la API
-dotnet run --project Prodhab.Api
+```
+Borrador → Enviado → (RequiereSubsanacion ⇄ Enviado) → Aprobado
 ```
 
-La API quedará disponible según los puertos configurados en `Prodhab.Api/Properties/launchSettings.json`.
+- El **Usuario** crea un borrador, completa el formulario por pasos y lo envía.
+- El **Admin** (PRODHAB) revisa: aprueba (asignando el número de expediente) o solicita subsanación
+  con observaciones por paso.
+- El **Usuario** corrige, adjunta subsanaciones y reenvía.
 
-## Configuración y variables de entorno
+## Ejecución en desarrollo
 
-`appsettings.json` incluye una clave JWT y una cadena de conexión **solo para desarrollo local** (LocalDB). Para un entorno de producción, estos valores **no deben vivir en el repositorio** y deben sobreescribirse mediante variables de entorno:
+Requisitos: .NET 10 SDK y SQL Server LocalDB (incluido con Visual Studio).
 
-| Variable de entorno | Reemplaza a |
-|---|---|
-| `Jwt__Key` | `Jwt:Key` en `appsettings.json` |
-| `ConnectionStrings__DefaultConnection` | `ConnectionStrings:DefaultConnection` en `appsettings.json` |
+```bash
+# Restaurar dependencias
+dotnet restore
 
-La carpeta `Storage/` (archivos subidos por usuarios, ej. subsanaciones) no se versiona en git.
+# La configuración de desarrollo (appsettings.Development.json) ya trae la cadena de
+# conexión a LocalDB, la clave JWT de desarrollo y un usuario administrador de prueba.
+
+# Crear el esquema de la base (aplica las migraciones)
+dotnet ef database update
+
+# Ejecutar
+dotnet run
+```
+
+En desarrollo se crea automáticamente el usuario **dev@prodhab.local / dev123** (rol Admin).
+La API expone la especificación OpenAPI en `/openapi/v1.json` y un endpoint de salud en `/health`.
+
+## Configuración por entorno
+
+Los secretos y valores específicos del entorno **no están en el repositorio**. En producción se
+configuran por variables de entorno:
+
+- `ASPNETCORE_ENVIRONMENT=Production`
+- `ConnectionStrings__DefaultConnection`
+- `Jwt__Key` (mínimo 32 caracteres)
+- `Cors__AllowedOrigins__0` (dominio del frontend)
+- `AdminInicial__Nombre`, `AdminInicial__Email`, `AdminInicial__Password` (primer administrador,
+  creado en el primer arranque si la base no tiene usuarios)
+
+El archivo `appsettings.Production.json` es una plantilla de referencia sin secretos.
+
+## Despliegue
+
+Ver **`MANUAL_INSTALACION.md`** para la guía completa de instalación en producción (Windows/IIS y
+Linux), incluyendo la base de datos SQL Server Express y el frontend.
+
+El esquema de base de datos para producción se crea con el script idempotente
+`Migrations/prodhab-esquema-completo.sql`.
