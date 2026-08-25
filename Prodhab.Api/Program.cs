@@ -52,6 +52,7 @@ builder.Services.AddScoped<IValidadorArchivo, ValidadorArchivo>();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddScoped<ISubsanacionService, SubsanacionService>();
 builder.Services.AddScoped<IRevisionService, RevisionService>();
+builder.Services.AddScoped<INotificacionService, NotificacionService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

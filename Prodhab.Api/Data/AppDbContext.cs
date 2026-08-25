@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<Subsanacion> Subsanaciones => Set<Subsanacion>();
     public DbSet<HistorialExpediente> HistorialExpedientes => Set<HistorialExpediente>();
     public DbSet<Observacion> Observaciones => Set<Observacion>();
+    public DbSet<Notificacion> Notificaciones => Set<Notificacion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -83,6 +84,15 @@ public class AppDbContext : DbContext
                 .WithMany(e => e.Observaciones)
                 .HasForeignKey(o => o.ExpedienteId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Notificacion>(entity =>
+        {
+            // FK opcional: si el expediente se borra, no se pierden notificaciones antiguas.
+            entity.HasOne(n => n.Expediente)
+                .WithMany()
+                .HasForeignKey(n => n.ExpedienteId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

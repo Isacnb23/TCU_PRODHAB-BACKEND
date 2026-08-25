@@ -101,6 +101,17 @@ public class ExpedientesController : ControllerBase
         return Ok(actualizado);
     }
 
+    [HttpGet("{id:int}/sugerir-numero")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(SugerirNumeroDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SugerirNumeroDto>> SugerirNumero(int id, CancellationToken ct)
+    {
+        var numeroSugerido = await _revision.SugerirNumeroAsync(id, ct);
+        return Ok(new SugerirNumeroDto { NumeroSugerido = numeroSugerido });
+    }
+
     [HttpPost("{id:int}/aprobar")]
     [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(ExpedienteDetalleDto), StatusCodes.Status200OK)]

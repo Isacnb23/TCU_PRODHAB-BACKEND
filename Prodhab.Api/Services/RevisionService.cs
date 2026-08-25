@@ -9,15 +9,27 @@ namespace Prodhab.Api.Services;
 
 public class RevisionService : IRevisionService
 {
+    // Provisional hasta que PRODHAB confirme la convención real de códigos por tipo de entidad.
+    private const string CodigoEntidadDefault = "INS";
+
     private readonly AppDbContext _db;
     private readonly ICurrentUserService _currentUser;
     private readonly IExpedienteService _expedientes;
+    private readonly INotificacionService _notificaciones;
+    private readonly ILogger<RevisionService> _logger;
 
-    public RevisionService(AppDbContext db, ICurrentUserService currentUser, IExpedienteService expedientes)
+    public RevisionService(
+        AppDbContext db,
+        ICurrentUserService currentUser,
+        IExpedienteService expedientes,
+        INotificacionService notificaciones,
+        ILogger<RevisionService> logger)
     {
         _db = db;
         _currentUser = currentUser;
         _expedientes = expedientes;
+        _notificaciones = notificaciones;
+        _logger = logger;
     }
 
     public async Task<ExpedienteDetalleDto> SolicitarSubsanacionAsync(int id, SolicitarSubsanacionDto dto, CancellationToken ct)
@@ -73,6 +85,19 @@ public class RevisionService : IRevisionService
 
         await _db.SaveChangesAsync(ct);
 
+        try
+        {
+            await _notificaciones.CrearAsync(
+                expediente.UsuarioId,
+                $"Tu expediente '{expediente.Entidad}' requiere subsanación.",
+                expediente.Id,
+                ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "No se pudo crear la notificación de solicitud de subsanación para el expediente {ExpedienteId}.", id);
+        }
+
         return await _expedientes.ObtenerPorIdAsync(id, ct);
     }
 
@@ -113,7 +138,41 @@ public class RevisionService : IRevisionService
 
         await _db.SaveChangesAsync(ct);
 
+        try
+        {
+            await _notificaciones.CrearAsync(
+                expediente.UsuarioId,
+                $"Tu expediente '{expediente.Entidad}' fue aprobado (Nº {dto.NumeroExpediente}).",
+                expediente.Id,
+                ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "No se pudo crear la notificación de aprobación para el expediente {ExpedienteId}.", id);
+        }
+
         return await _expedientes.ObtenerPorIdAsync(id, ct);
+    }
+
+    // Sugerencia de solo lectura para precargar el campo de número en el modal de aprobar: no
+    // reserva ni guarda nada en la base. El Admin sigue pudiendo escribir cualquier número al
+    // confirmar (ver AprobarAsync), esto es solo un valor de partida.
+    public async Task<string> SugerirNumeroAsync(int id, CancellationToken ct)
+    {
+        var expediente = await _db.Expedientes.FirstOrDefaultAsync(e => e.Id == id, ct);
+
+        if (expediente is null)
+        {
+            throw new NotFoundException($"No existe el expediente {id}.");
+        }
+
+        var ahora = DateTime.UtcNow;
+
+        var correlativo = await _db.HistorialExpedientes
+            .CountAsync(h => h.Accion == "Aprobacion" && h.FechaCambio.Year == ahora.Year, ct);
+        correlativo += 1;
+
+        return $"{correlativo:D3}-{ahora.Month:D2}-{ahora.Year}-{CodigoEntidadDefault}";
     }
 
     // Carga el expediente y verifica que el usuario actual sea su dueño (o Admin).

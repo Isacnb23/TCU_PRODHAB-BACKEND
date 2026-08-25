@@ -14,11 +14,19 @@ public class ExpedienteService : IExpedienteService
 
     private readonly AppDbContext _db;
     private readonly ICurrentUserService _currentUser;
+    private readonly INotificacionService _notificaciones;
+    private readonly ILogger<ExpedienteService> _logger;
 
-    public ExpedienteService(AppDbContext db, ICurrentUserService currentUser)
+    public ExpedienteService(
+        AppDbContext db,
+        ICurrentUserService currentUser,
+        INotificacionService notificaciones,
+        ILogger<ExpedienteService> logger)
     {
         _db = db;
         _currentUser = currentUser;
+        _notificaciones = notificaciones;
+        _logger = logger;
     }
 
     public async Task<ExpedienteDetalleDto> CrearAsync(CrearExpedienteDto dto, CancellationToken ct)
@@ -229,6 +237,27 @@ public class ExpedienteService : IExpedienteService
         });
 
         await _db.SaveChangesAsync(ct);
+
+        try
+        {
+            var adminsActivos = await _db.Usuarios
+                .Where(u => u.Rol == "Admin" && u.Activo)
+                .Select(u => u.Id)
+                .ToListAsync(ct);
+
+            foreach (var adminId in adminsActivos)
+            {
+                await _notificaciones.CrearAsync(
+                    adminId,
+                    $"El expediente '{expediente.Entidad}' fue enviado para revisión.",
+                    expediente.Id,
+                    ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "No se pudo crear la notificación de envío para el expediente {ExpedienteId}.", id);
+        }
 
         return await ObtenerPorIdAsync(id, ct);
     }
