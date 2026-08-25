@@ -10,4 +10,7 @@ public class ObservacionInputDto
     [Required]
     [MaxLength(2000)]
     public string Texto { get; set; } = string.Empty;
+
+    [MaxLength(200)]
+    public string? Campo { get; set; }
 }

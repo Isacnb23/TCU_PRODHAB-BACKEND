@@ -14,6 +14,9 @@ public class Observacion
     [MaxLength(2000)]
     public string Texto { get; set; } = string.Empty;
 
+    [MaxLength(200)]
+    public string? Campo { get; set; }
+
     // Admin que la creó. Columna simple, sin navegación, para evitar cascade paths.
     public int UsuarioId { get; set; }
 

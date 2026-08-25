@@ -36,6 +36,11 @@ public class RevisionService : IRevisionService
             {
                 throw new ValidationException($"El paso {observacion.Paso} no es válido (debe estar entre 1 y 9).");
             }
+
+            if (string.IsNullOrWhiteSpace(observacion.Campo))
+            {
+                throw new ValidationException("Cada observación debe indicar a qué campo corresponde.");
+            }
         }
 
         var ahora = DateTime.UtcNow;
@@ -48,6 +53,7 @@ public class RevisionService : IRevisionService
                 ExpedienteId = id,
                 Paso = observacion.Paso,
                 Texto = observacion.Texto,
+                Campo = observacion.Campo,
                 UsuarioId = adminId,
                 FechaCreacion = ahora
             });

@@ -8,5 +8,7 @@ public class ObservacionDto
 
     public string Texto { get; set; } = string.Empty;
 
+    public string? Campo { get; set; }
+
     public DateTime FechaCreacion { get; set; }
 }

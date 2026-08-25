@@ -135,6 +135,7 @@ public class ExpedienteService : IExpedienteService
                         Id = o.Id,
                         Paso = o.Paso,
                         Texto = o.Texto,
+                        Campo = o.Campo,
                         FechaCreacion = o.FechaCreacion
                     })
                     .ToList()
