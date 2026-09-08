@@ -205,3 +205,62 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260825124605_AgregarCampoAObservacion'
+)
+BEGIN
+    ALTER TABLE [Observaciones] ADD [Campo] nvarchar(200) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260825124605_AgregarCampoAObservacion'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260825124605_AgregarCampoAObservacion', N'10.0.10');
+END;
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260825170829_AgregarNotificaciones'
+)
+BEGIN
+    CREATE TABLE [Notificaciones] (
+        [Id] int NOT NULL IDENTITY,
+        [UsuarioId] int NOT NULL,
+        [Mensaje] nvarchar(300) NOT NULL,
+        [ExpedienteId] int NULL,
+        [Leida] bit NOT NULL,
+        [FechaCreacion] datetime2 NOT NULL,
+        CONSTRAINT [PK_Notificaciones] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_Notificaciones_Expedientes_ExpedienteId] FOREIGN KEY ([ExpedienteId]) REFERENCES [Expedientes] ([Id]) ON DELETE SET NULL
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260825170829_AgregarNotificaciones'
+)
+BEGIN
+    CREATE INDEX [IX_Notificaciones_ExpedienteId] ON [Notificaciones] ([ExpedienteId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260825170829_AgregarNotificaciones'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260825170829_AgregarNotificaciones', N'10.0.10');
+END;
+
+COMMIT;
+GO
+
