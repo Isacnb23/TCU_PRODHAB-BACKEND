@@ -208,6 +208,10 @@ public class ExpedienteService : IExpedienteService
             throw new BusinessRuleException($"No se puede enviar un expediente en estado {expediente.Estado}.");
         }
 
+        // Capturado ANTES de reasignar el estado más abajo: define si el mensaje de notificación
+        // debe hablar de "reenvío tras subsanación" o de un envío inicial normal.
+        var esReenvioTrasSubsanacion = expediente.Estado == EstadoExpediente.RequiereSubsanacion;
+
         var pasosCompletados = await _db.DatosFormularios
             .Where(d => d.ExpedienteId == id && d.Completado)
             .Select(d => d.Paso)
@@ -232,7 +236,9 @@ public class ExpedienteService : IExpedienteService
             ExpedienteId = expediente.Id,
             UsuarioId = _currentUser.GetUserId(),
             Accion = "Envio",
-            Detalle = "Expediente enviado a PRODHAB",
+            Detalle = esReenvioTrasSubsanacion
+                ? "Expediente reenviado a PRODHAB tras subsanación"
+                : "Expediente enviado a PRODHAB",
             FechaCambio = ahora
         });
 
@@ -245,13 +251,16 @@ public class ExpedienteService : IExpedienteService
                 .Select(u => u.Id)
                 .ToListAsync(ct);
 
+            // Mismo criterio que ya usa el front para el botón "Enviar"/"Reenviar a PRODHAB":
+            // un reenvío tras subsanación no es lo mismo que la primera vez que llega el
+            // expediente, y el Admin debe poder distinguirlo de un vistazo en sus notificaciones.
+            var mensaje = esReenvioTrasSubsanacion
+                ? $"El expediente '{expediente.Entidad}' fue reenviado tras subsanación. Está listo para revisar de nuevo."
+                : $"El expediente '{expediente.Entidad}' fue enviado para revisión.";
+
             foreach (var adminId in adminsActivos)
             {
-                await _notificaciones.CrearAsync(
-                    adminId,
-                    $"El expediente '{expediente.Entidad}' fue enviado para revisión.",
-                    expediente.Id,
-                    ct);
+                await _notificaciones.CrearAsync(adminId, mensaje, expediente.Id, ct);
             }
         }
         catch (Exception ex)
