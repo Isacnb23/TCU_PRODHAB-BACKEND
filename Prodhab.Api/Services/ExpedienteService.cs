@@ -103,7 +103,8 @@ public class ExpedienteService : IExpedienteService
                 Estado = e.Estado.ToString(),
                 PasoActual = e.PasoActual,
                 FechaCreacion = e.FechaCreacion,
-                FechaModificacion = e.FechaModificacion
+                FechaModificacion = e.FechaModificacion,
+                TieneObservacionesPrevias = e.Observaciones.Any()
             })
             .ToListAsync(ct);
     }
@@ -126,6 +127,7 @@ public class ExpedienteService : IExpedienteService
                 FechaCreacion = e.FechaCreacion,
                 FechaModificacion = e.FechaModificacion,
                 FechaEnvio = e.FechaEnvio,
+                TieneObservacionesPrevias = e.Observaciones.Any(),
                 Datos = e.Datos
                     .OrderBy(d => d.Paso)
                     .Select(d => new DatosFormularioDto

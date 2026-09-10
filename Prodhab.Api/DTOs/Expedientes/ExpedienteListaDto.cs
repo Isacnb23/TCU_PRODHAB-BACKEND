@@ -18,4 +18,9 @@ public class ExpedienteListaDto
     public DateTime FechaCreacion { get; set; }
 
     public DateTime FechaModificacion { get; set; }
+
+    // Señal derivada: true si el expediente ya tuvo al menos una observación
+    // (nunca se borran), es decir, si un envío en estado Enviado es en
+    // realidad un reenvío tras subsanación.
+    public bool TieneObservacionesPrevias { get; set; }
 }
