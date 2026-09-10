@@ -51,4 +51,15 @@ public class UsuariosController : ControllerBase
         await _usuarios.DesactivarAsync(id, ct);
         return NoContent();
     }
+
+    [HttpPatch("{id:int}/resetear-password")]
+    [ProducesResponseType(typeof(ResetearPasswordDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ResetearPasswordDto>> ResetearPassword(int id, CancellationToken ct)
+    {
+        var passwordTemporal = await _usuarios.ResetearPasswordAsync(id, ct);
+        return Ok(new ResetearPasswordDto { PasswordTemporal = passwordTemporal });
+    }
 }

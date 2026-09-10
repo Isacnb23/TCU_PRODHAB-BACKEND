@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Prodhab.Api.Data;
 using Prodhab.Api.DTOs.Usuarios;
@@ -9,6 +10,13 @@ namespace Prodhab.Api.Services;
 public class UsuarioService : IUsuarioService
 {
     private static readonly string[] RolesPermitidos = ["Admin", "Usuario"];
+
+    // Sin caracteres ambiguos: 0/O, 1/l/I quedan fuera para que la contraseña
+    // temporal se pueda leer y transcribir en voz alta sin confusiones.
+    private const string CaracteresPasswordTemporal =
+        "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+
+    private const int LongitudPasswordTemporal = 10;
 
     private readonly AppDbContext _db;
 
@@ -101,6 +109,30 @@ public class UsuarioService : IUsuarioService
         }
 
         return usuario;
+    }
+
+    public async Task<string> ResetearPasswordAsync(int id, CancellationToken ct)
+    {
+        var usuario = await _db.Usuarios.FirstOrDefaultAsync(u => u.Id == id, ct);
+
+        if (usuario is null)
+        {
+            throw new NotFoundException($"No existe el usuario {id}.");
+        }
+
+        var passwordTemporal = GenerarPasswordTemporal();
+        usuario.PasswordHash = BCrypt.Net.BCrypt.HashPassword(passwordTemporal);
+        await _db.SaveChangesAsync(ct);
+
+        // Única vez que la contraseña existe en texto plano: se devuelve al Admin
+        // para que la comunique por fuera del sistema, nunca se guarda así.
+        return passwordTemporal;
+    }
+
+    private static string GenerarPasswordTemporal()
+    {
+        var caracteres = RandomNumberGenerator.GetItems<char>(CaracteresPasswordTemporal, LongitudPasswordTemporal);
+        return new string(caracteres);
     }
 
     private static UsuarioDto MapearADto(Usuario u) => new()
