@@ -104,6 +104,9 @@ public class ExpedienteService : IExpedienteService
                 PasoActual = e.PasoActual,
                 FechaCreacion = e.FechaCreacion,
                 FechaModificacion = e.FechaModificacion,
+                UsuarioId = e.UsuarioId,
+                UsuarioNombre = e.Usuario!.Nombre,
+                UsuarioEmail = e.Usuario!.Email,
                 TieneObservacionesPrevias = e.Observaciones.Any()
             })
             .ToListAsync(ct);
