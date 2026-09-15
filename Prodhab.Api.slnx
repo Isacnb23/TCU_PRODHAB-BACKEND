@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="Prodhab.Api.Tests/Prodhab.Api.Tests.csproj" />
   <Project Path="Prodhab.Api/Prodhab.Api.csproj" />
 </Solution>
