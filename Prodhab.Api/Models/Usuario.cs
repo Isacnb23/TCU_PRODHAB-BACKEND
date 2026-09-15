@@ -24,5 +24,10 @@ public class Usuario
 
     public bool Activo { get; set; } = true;
 
+    // El primer Admin que siembra el sistema (ver DbSeeder). No se puede desactivar:
+    // sin este candado, un Admin podría dejar el sistema sin ningún Admin activo.
+    // Otros Admin creados después sí pueden desactivarse entre sí normalmente.
+    public bool EsSuperAdmin { get; set; } = false;
+
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }

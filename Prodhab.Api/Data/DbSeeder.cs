@@ -28,6 +28,7 @@ public static class DbSeeder
             Email = adminInicial.Email,
             Rol = "Admin",
             Activo = true,
+            EsSuperAdmin = true,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminInicial.Password)
         });
 

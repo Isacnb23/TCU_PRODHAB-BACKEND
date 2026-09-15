@@ -68,6 +68,7 @@ public class UsuarioService : IUsuarioService
                 Email = u.Email,
                 Rol = u.Rol,
                 Activo = u.Activo,
+                EsSuperAdmin = u.EsSuperAdmin,
                 FechaCreacion = u.FechaCreacion
             })
             .ToListAsync(ct);
@@ -80,6 +81,11 @@ public class UsuarioService : IUsuarioService
         if (usuario is null)
         {
             throw new NotFoundException($"No existe el usuario {id}.");
+        }
+
+        if (usuario.EsSuperAdmin)
+        {
+            throw new BusinessRuleException("El superusuario original del sistema no se puede desactivar.");
         }
 
         // Los usuarios no se borran: quedan inactivos para preservar la trazabilidad.
@@ -99,6 +105,7 @@ public class UsuarioService : IUsuarioService
                 Email = u.Email,
                 Rol = u.Rol,
                 Activo = u.Activo,
+                EsSuperAdmin = u.EsSuperAdmin,
                 FechaCreacion = u.FechaCreacion
             })
             .FirstOrDefaultAsync(ct);
@@ -142,6 +149,7 @@ public class UsuarioService : IUsuarioService
         Email = u.Email,
         Rol = u.Rol,
         Activo = u.Activo,
+        EsSuperAdmin = u.EsSuperAdmin,
         FechaCreacion = u.FechaCreacion
     };
 }

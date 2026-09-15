@@ -13,5 +13,7 @@ public class UsuarioDto
 
     public bool Activo { get; set; }
 
+    public bool EsSuperAdmin { get; set; }
+
     public DateTime FechaCreacion { get; set; }
 }
